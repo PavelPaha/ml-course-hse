@@ -49,22 +49,9 @@ class BaseDescent:
         return self.update_weights(self.calc_gradient(x, y))
 
     def update_weights(self, gradient: np.ndarray) -> np.ndarray:
-        """
-        Template for update_weights function
-        Update weights with respect to gradient
-        :param gradient: gradient
-        :return: weight difference (w_{k + 1} - w_k): np.ndarray
-        """
         pass
 
     def calc_gradient(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """
-        Template for calc_gradient function
-        Calculate gradient of loss function with respect to weights
-        :param x: features array
-        :param y: targets array
-        :return: gradient: np.ndarray
-        """
         pass
 
     def calc_loss(self, x: np.ndarray, y: np.ndarray) -> float:
@@ -74,8 +61,7 @@ class BaseDescent:
         :param y: targets array
         :return: loss: float
         """
-        # TODO: implement loss calculation function
-        raise NotImplementedError('BaseDescent calc_loss function not implemented')
+        return 1 / x.shape[0] * np.dot((y - x @ self.w).T, y - x @ self.w)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
         """
@@ -83,8 +69,8 @@ class BaseDescent:
         :param x: features array
         :return: prediction: np.ndarray
         """
-        # TODO: implement prediction function
-        raise NotImplementedError('BaseDescent predict function not implemented')
+        prediction = np.dot(x, self.w)
+        return prediction
 
 
 class VanillaGradientDescent(BaseDescent):
@@ -96,12 +82,13 @@ class VanillaGradientDescent(BaseDescent):
         """
         :return: weight difference (w_{k + 1} - w_k): np.ndarray
         """
-        # TODO: implement updating weights function
-        raise NotImplementedError('VanillaGradientDescent update_weights function not implemented')
+        diff = self.lr() * gradient
+        self.w -= diff
+        return -diff
 
     def calc_gradient(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        # TODO: implement calculating gradient function
-        raise NotImplementedError('VanillaGradientDescent calc_gradient function not implemented')
+        errors = x @ self.w - y
+        return 2 / x.shape[0] * x.T @ errors
 
 
 class StochasticDescent(VanillaGradientDescent):
@@ -118,8 +105,12 @@ class StochasticDescent(VanillaGradientDescent):
         self.batch_size = batch_size
 
     def calc_gradient(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        # TODO: implement calculating gradient function
-        raise NotImplementedError('StochasticDescent calc_gradient function not implemented')
+        indices = np.random.randint(0, x.shape[0], self.batch_size)
+        x_batch = x[indices]
+        y_batch = y[indices]
+
+        errors = x_batch @ self.w - y_batch
+        return 2 / self.batch_size * x_batch.T @ errors
 
 
 class MomentumDescent(VanillaGradientDescent):
@@ -137,8 +128,11 @@ class MomentumDescent(VanillaGradientDescent):
         """
         :return: weight difference (w_{k + 1} - w_k): np.ndarray
         """
-        # TODO: implement updating weights function
-        raise NotImplementedError('MomentumDescent update_weights function not implemented')
+
+        p = self.lr() * gradient
+        self.h = self.alpha * self.h + p
+        self.w -= self.h
+        return -self.h
 
 
 class Adam(VanillaGradientDescent):
@@ -159,11 +153,18 @@ class Adam(VanillaGradientDescent):
         self.iteration: int = 0
 
     def update_weights(self, gradient: np.ndarray) -> np.ndarray:
-        """
-        :return: weight difference (w_{k + 1} - w_k): np.ndarray
-        """
-        # TODO: implement updating weights function
-        raise NotImplementedError('Adagrad update_weights function not implemented')
+        self.m = self.beta_1 * self.m + (1 - self.beta_1) * gradient
+        g2 = gradient**2
+        self.v = self.beta_2 * self.v + (1 - self.beta_2) * g2
+
+        m_hat = self.m / (1 - self.beta_1 ** self.iteration)
+        v_hat = self.v / (1 - self.beta_2 ** self.iteration)
+
+        weight_diff = self.lr() / (np.sqrt(v_hat) + self.eps) * m_hat
+
+        self.w -= weight_diff
+        self.iteration += 1
+        return - weight_diff
 
 
 class BaseDescentReg(BaseDescent):
